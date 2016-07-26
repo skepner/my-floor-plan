@@ -6,7 +6,7 @@ void room_work(Surface& s)
 {
     const double w1 = 4.14, w2 = 4.29, c1 = 1.05, c2 = 1.53;
 
-    s.wall(0,  0,       w1,      0);
+    s.wall_with_size(0,  0,       w1,      0, 0, -0.2);
     s.wall(w1, 0,       w1,      w2 - c2);
     s.wall(w1, w2 - c2, w1 - c1, w2 - c2);
     s.wall_with_door(w1 - c1, w2 - c2, w1 - c1, w2);
