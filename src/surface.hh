@@ -1,5 +1,9 @@
 #pragma once
 
+#include <stdexcept>
+#include <cstdint>
+#include <string>
+
 #include "cairo.hh"
 
 // ----------------------------------------------------------------------

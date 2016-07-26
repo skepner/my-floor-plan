@@ -9,7 +9,7 @@ MAKEFLAGS = -w
 
 SOURCES_DIR = src
 
-SOURCES = main.cc
+SOURCES = main.cc room.cc
 
 # ----------------------------------------------------------------------
 

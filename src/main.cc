@@ -1,7 +1,7 @@
 #include <iostream>
 #include <getopt.h>
 
-#include "surface.hh"
+#include "room.hh"
 
 // ----------------------------------------------------------------------
 
@@ -61,26 +61,9 @@ void draw(std::string filename, size_t canvas_height, size_t canvas_width)
       // ----------------------------------------------------------------------
       // 2.OG
 
-      // work
-    double w1 = 4.14, w2 = 4.29;
-    s.wall(0, 0, w1, 0);
-    s.wall(w1, 0, w1, w2 - 1.53);
-    s.wall(w1, 2.77, w1 - 1.05, w2 - 1.53);
-    s.wall_with_door(w1 - 1.05, w2 - 1.53, w1 - 1.05, w2);
-    s.wall(w1 - 1.05, w2, 0, w2);
-    s.wall(0, w2, 0, 0);
-
-      // heizung
-    s.wall(0, w2, 0, w2 + 1.35);
-    s.wall(0, w2 + 1.35, w1 - 1.05, w2 + 1.35);
-    s.wall(w1 - 1.05, w2 + 1.35, w1 - 1.05, w2);
-
-      // flur 2.85
-    double ww = 0.12;
-    s.wall(w1 - 1.05 + ww, w2 - 1.53 + ww, w1 - 1.05 + 2.85, w2 - 1.53 + ww);
-    s.wall(w1 - 1.05 + 2.85, w2 - 1.53 + ww, w1 - 1.05 + 2.85, w2 - 1.53 + 2.76 + ww);
-    s.wall(w1 - 1.05 + 2.85, w2 - 1.53 + 2.76 + ww, w1 - 1.05 + ww, w2 - 1.53 + 2.76 + ww);
-    s.wall(w1 - 1.05 + ww, w2 - 1.53 + 2.76 + ww, w1 - 1.05 + ww, w2 - 1.53 + ww);
+    room_work(s);
+    heizung_2og(s);
+    flur_2og(s);
 
 } // draw
 
