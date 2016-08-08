@@ -50,7 +50,7 @@ void usage(std::string progname)
 
 void draw(std::string filename, size_t canvas_height, size_t canvas_width)
 {
-    Surface s(filename, canvas_width, canvas_height);
+    Surface s(filename, canvas_width, canvas_height, false);
     s.drawing_area(0.1, 10.34);
 
     s.line( 0,    0,    10.34, 0,    RED);

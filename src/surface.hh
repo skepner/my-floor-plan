@@ -120,9 +120,9 @@ class Surface
     };
 
  public:
-    inline Surface(std::string filename, size_t width, size_t height)
+    inline Surface(std::string filename, size_t width, size_t height, bool show_wall_sizes)
         : mContext(nullptr), mWidth(width), mHeight(height), mScale(1),
-          mWallWidth(5), mDoorWidth(1), mSizeLineWidth(0.5), mSizeTextSize(10)
+          mWallWidth(5), mDoorWidth(1), mSizeLineWidth(0.5), mSizeTextSize(10), mShowWallSizes(show_wall_sizes)
         {
             auto surface = cairo_pdf_surface_create(filename.empty() ? nullptr : filename.c_str(), width, height);
             if (cairo_surface_status(surface) != CAIRO_STATUS_SUCCESS)
@@ -177,18 +177,21 @@ class Surface
             const auto ts = text_size(tx, mSizeTextSize);
 
             line(x1, y1, x2, y2, BLACK, mWallWidth);
-            line(x1, y1, x1 + x_off, y1 + y_off, BLACK, mSizeLineWidth);
-            line(x2, y2, x2 + x_off, y2 + y_off, BLACK, mSizeLineWidth);
 
-            const auto p1 = at_offset(x1 + x_off, y1 + y_off, x2 + x_off, y2 + y_off, (length(x1, y1, x2, y2) - ts.first) / 2);
-            const auto p2 = at_offset(x1 + x_off, y1 + y_off, x2 + x_off, y2 + y_off, (length(x1, y1, x2, y2) + ts.first) / 2);
-            const double rotation = x1 == x2 ? - M_PI_2 : asin((y2 - y1) / (x2 - x1));
-            if (x2 >= x1 && y2 <= y1)
-                text(p1.first, p1.second, tx, BLACK, mSizeTextSize, TextStyle(), rotation);
-            else
-                text(p2.first, p2.second, tx, BLACK, mSizeTextSize, TextStyle(), rotation);
-            line(x1 + x_off, y1 + y_off, p1.first, p1.second, BLACK, mSizeLineWidth);
-            line(p2.first, p2.second, x2 + x_off, y2 + y_off, BLACK, mSizeLineWidth);
+            if (mShowWallSizes) {
+                line(x1, y1, x1 + x_off, y1 + y_off, BLACK, mSizeLineWidth);
+                line(x2, y2, x2 + x_off, y2 + y_off, BLACK, mSizeLineWidth);
+
+                const auto p1 = at_offset(x1 + x_off, y1 + y_off, x2 + x_off, y2 + y_off, (length(x1, y1, x2, y2) - ts.first) / 2);
+                const auto p2 = at_offset(x1 + x_off, y1 + y_off, x2 + x_off, y2 + y_off, (length(x1, y1, x2, y2) + ts.first) / 2);
+                const double rotation = x1 == x2 ? - M_PI_2 : asin((y2 - y1) / (x2 - x1));
+                if (x2 >= x1 && y2 <= y1)
+                    text(p1.first, p1.second, tx, BLACK, mSizeTextSize, TextStyle(), rotation);
+                else
+                    text(p2.first, p2.second, tx, BLACK, mSizeTextSize, TextStyle(), rotation);
+                line(x1 + x_off, y1 + y_off, p1.first, p1.second, BLACK, mSizeLineWidth);
+                line(p2.first, p2.second, x2 + x_off, y2 + y_off, BLACK, mSizeLineWidth);
+            }
         }
 
     inline void line(double x1, double y1, double x2, double y2, Color color = BLACK, double aWidth = 1, const std::vector<double>& aDashes = std::vector<double>(), cairo_line_cap_t aLineCap = CAIRO_LINE_CAP_BUTT)
@@ -281,6 +284,7 @@ class Surface
     cairo_t* mContext;
     double mWidth, mHeight, mScale;
     double mWallWidth, mDoorWidth, mSizeLineWidth, mSizeTextSize;
+    bool mShowWallSizes;
     friend class PushContext;
 
     inline void set_source_rgba(Color aColor) const
