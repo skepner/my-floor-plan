@@ -5,9 +5,9 @@
 #include <cstdint>
 #include <string>
 #include <vector>
-#include <cmath>
 
 #include "cairo.hh"
+#include "util.hh"
 
 // ----------------------------------------------------------------------
 
@@ -104,6 +104,8 @@ class TextStyle
 
 // ----------------------------------------------------------------------
 
+enum class DoorDirection { firstLeft, secondLeft, firstRight, secondRight };
+
 class Surface
 {
  private:
@@ -120,7 +122,7 @@ class Surface
  public:
     inline Surface(std::string filename, size_t width, size_t height)
         : mContext(nullptr), mWidth(width), mHeight(height), mScale(1),
-          mWallWidth(5), mSizeLineWidth(0.5), mSizeTextSize(10)
+          mWallWidth(5), mDoorWidth(1), mSizeLineWidth(0.5), mSizeTextSize(10)
         {
             auto surface = cairo_pdf_surface_create(filename.empty() ? nullptr : filename.c_str(), width, height);
             if (cairo_surface_status(surface) != CAIRO_STATUS_SUCCESS)
@@ -146,42 +148,110 @@ class Surface
             cairo_scale(mContext, scale, scale);
         }
 
+    inline double wall_width_2() const
+        {
+            return mWallWidth * mScale / 2;
+        }
+
     inline void wall(double x1, double y1, double x2, double y2)
         {
             line(x1, y1, x2, y2, BLACK, mWallWidth);
         }
 
-    inline void wall_with_door(double x1, double y1, double x2, double y2)
+    inline void wall_with_door(double x1, double y1, double x2, double y2, double door_offset, double door_width, DoorDirection door_direction)
         {
-            line(x1, y1, x2, y2, BLUE, mWallWidth, {mScale * 5, mScale * 5});
+              //const double wall_length = length(x1, y1, x2, y2);
+            const auto p1 = at_offset(x1, y1, x2, y2, door_offset);
+            const auto p2 = at_offset(x1, y1, x2, y2, door_offset + door_width);
+            line(x1, y1, p1.first, p1.second, BLACK, mWallWidth);
+            line(p2.first, p2.second, x2, y2, BLACK, mWallWidth);
+
+            door(p1.first, p1.second, p2.first, p2.second, door_direction);
+              // line(x1, y1, x2, y2, BLUE, mWallWidth, {mScale * 5, mScale * 5});
         }
 
     inline void wall_with_size(double x1, double y1, double x2, double y2, double x_off, double y_off)
         {
-            const double size = sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
-            std::string tx = std::to_string(size);
+            const double size = length(x1, y1, x2, y2);
+            std::string tx = to_string(size);
             const auto ts = text_size(tx, mSizeTextSize);
 
             line(x1, y1, x2, y2, BLACK, mWallWidth);
             line(x1, y1, x1 + x_off, y1 + y_off, BLACK, mSizeLineWidth);
             line(x2, y2, x2 + x_off, y2 + y_off, BLACK, mSizeLineWidth);
 
-            const double txx = (size - ts.first) / 2, txy = ts.second / 2;
-            text(x1 + x_off + txx, y1 + y_off + txy, tx, BLACK, mSizeTextSize);
-            line(x1 + x_off, y1 + y_off, x1 + x_off + txx * 0.95, y1 + y_off, BLACK, mSizeLineWidth);
-            line(x2 + x_off, y2 + y_off, x1 + x_off + txx + ts.first, y2 + y_off, BLACK, mSizeLineWidth);
+            const auto p1 = at_offset(x1 + x_off, y1 + y_off, x2 + x_off, y2 + y_off, (length(x1, y1, x2, y2) - ts.first) / 2);
+            const auto p2 = at_offset(x1 + x_off, y1 + y_off, x2 + x_off, y2 + y_off, (length(x1, y1, x2, y2) + ts.first) / 2);
+            const double rotation = x1 == x2 ? - M_PI_2 : asin((y2 - y1) / (x2 - x1));
+            if (x2 >= x1 && y2 <= y1)
+                text(p1.first, p1.second, tx, BLACK, mSizeTextSize, TextStyle(), rotation);
+            else
+                text(p2.first, p2.second, tx, BLACK, mSizeTextSize, TextStyle(), rotation);
+            line(x1 + x_off, y1 + y_off, p1.first, p1.second, BLACK, mSizeLineWidth);
+            line(p2.first, p2.second, x2 + x_off, y2 + y_off, BLACK, mSizeLineWidth);
         }
 
     inline void line(double x1, double y1, double x2, double y2, Color color = BLACK, double aWidth = 1, const std::vector<double>& aDashes = std::vector<double>(), cairo_line_cap_t aLineCap = CAIRO_LINE_CAP_BUTT)
         {
             PushContext pc(*this);
-            cairo_set_line_width(mContext, aWidth * mScale);
+            const auto line_width = aWidth * mScale;
+            cairo_set_line_width(mContext, line_width);
             set_source_rgba(color);
             cairo_set_line_cap(mContext, aLineCap);
             if (!aDashes.empty())
                 cairo_set_dash(mContext, aDashes.data(), static_cast<int>(aDashes.size()), 0);
             cairo_move_to(mContext, x1, y1);
             cairo_line_to(mContext, x2, y2);
+            cairo_stroke(mContext);
+        }
+
+    inline void door(double x1, double y1, double x2, double y2, DoorDirection door_direction)
+        {
+            PushContext pc(*this);
+            const auto line_width = mDoorWidth * mScale;
+            cairo_set_line_width(mContext, line_width);
+            set_source_rgba(BLACK);
+            cairo_set_line_cap(mContext, CAIRO_LINE_CAP_BUTT);
+              //cairo_set_line_join(mContext, );
+            cairo_move_to(mContext, x1, y1);
+            cairo_line_to(mContext, x2, y2);
+            switch (door_direction) {
+              case DoorDirection::firstLeft:
+              {
+                  const auto p = perpendicular(x2, y2, x1, y1, true);
+                  cairo_move_to(mContext, x1, y1);
+                  cairo_line_to(mContext, p.first, p.second);
+                    //cairo_arc(mContext, x1, y1, length(x2, y2, x1, y1), 0, M_PI_2);
+                  cairo_move_to(mContext, x1, y1);
+                  const double start = x1 == x2 ? -M_PI_2 : asin((y2 - y1) / (x2 - x1));
+                  cairo_arc_negative(mContext, x1, y1, length(x2, y2, x1, y1), start, start-M_PI_2);
+              }
+                  break;
+              case DoorDirection::firstRight:
+              {
+                  const auto p = perpendicular(x2, y2, x1, y1, false);
+                  cairo_move_to(mContext, x1, y1);
+                  cairo_line_to(mContext, p.first, p.second);
+              }
+                  break;
+              case DoorDirection::secondLeft:
+              {
+                  const auto p = perpendicular(x1, y1, x2, y2, false);
+                  cairo_move_to(mContext, x2, y2);
+                  cairo_line_to(mContext, p.first, p.second);
+                  cairo_move_to(mContext, x2, y2);
+                  const double start = x1 == x2 ? -M_PI_2 : asin((y2 - y1) / (x2 - x1));
+                  cairo_arc(mContext, x2, y2, length(x2, y2, x1, y1), start, start+M_PI_2);
+              }
+                  break;
+              case DoorDirection::secondRight:
+              {
+                  const auto p = perpendicular(x1, y1, x2, y2, true);
+                  cairo_move_to(mContext, x2, y2);
+                  cairo_line_to(mContext, p.first, p.second);
+              }
+                  break;
+            }
             cairo_stroke(mContext);
         }
 
@@ -210,7 +280,7 @@ class Surface
  private:
     cairo_t* mContext;
     double mWidth, mHeight, mScale;
-    double mWallWidth, mSizeLineWidth, mSizeTextSize;
+    double mWallWidth, mDoorWidth, mSizeLineWidth, mSizeTextSize;
     friend class PushContext;
 
     inline void set_source_rgba(Color aColor) const

@@ -64,6 +64,8 @@ void draw(std::string filename, size_t canvas_height, size_t canvas_width)
     room_work(s);
     heizung_2og(s);
     flur_2og(s);
+    bad_2og(s);
+    bett_2og(s);
 
 } // draw
 
